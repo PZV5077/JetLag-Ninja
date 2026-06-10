@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JetLag Ninja - 智能倒时差与生物钟重置规划器</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="基于学术界 Phase Response Curve (PRC) 的智能倒时差计算工具。通过光照调整、避光控制、褪黑素与咖啡因调配，生成每日作息和 ICS 日历导出。">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Day.js Core & Plugins via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/utc.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/timezone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/customParseFormat.js"></script>
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i data-lucide="plane-takeoff" class="logo-icon"></i>
+                <h1>JetLag <span>Ninja</span></h1>
+            </div>
+            <p class="subtitle">基于时间生物学与最优控制理论的个性化昼夜节律重置方案</p>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="app-main">
+            <!-- Sidebar Panel: Inputs -->
+            <section class="config-panel glass-card">
+                <h2 id="config-title"><i data-lucide="sliders" class="section-icon"></i> 行程与作息设置</h2>
+                
+                <form id="plan-form" onsubmit="return false;">
+                    <!-- Normal Sleep Habits -->
+                    <div class="form-group-title">日常作息</div>
+                    <div class="form-row">
+                        <div class="form-group col-6">
+                            <label for="usual-sleep"><i data-lucide="moon" class="label-icon"></i> 习惯入睡时间</label>
+                            <input type="time" id="usual-sleep" value="23:30" required>
+                        </div>
+                        <div class="form-group col-6">
+                            <label for="usual-wake"><i data-lucide="sun" class="label-icon"></i> 习惯起床时间</label>
+                            <input type="time" id="usual-wake" value="07:30" required>
+                        </div>
+                    </div>
+
+                    <!-- Flight Departure Details -->
+                    <div class="form-group-title">航班起飞（出发地）</div>
+                    <div class="form-group">
+                        <label for="dept-datetime"><i data-lucide="calendar" class="label-icon"></i> 起飞日期与时间</label>
+                        <input type="datetime-local" id="dept-datetime" required>
+                    </div>
+                    <div class="form-group relative">
+                        <label for="dept-tz"><i data-lucide="globe" class="label-icon"></i> 出发地时区</label>
+                        <input type="text" id="dept-tz" class="tz-search" placeholder="输入城市或时区，如 Europe/London" autocomplete="off" required>
+                        <div id="dept-tz-dropdown" class="tz-dropdown hidden"></div>
+                    </div>
+
+                    <!-- Flight Arrival Details -->
+                    <div class="form-group-title">航班降落（目的地）</div>
+                    <div class="form-group">
+                        <label for="arr-datetime"><i data-lucide="calendar-check" class="label-icon"></i> 降落日期与时间</label>
+                        <input type="datetime-local" id="arr-datetime" required>
+                    </div>
+                    <div class="form-group relative">
+                        <label for="arr-tz"><i data-lucide="navigation" class="label-icon"></i> 目的地时区</label>
+                        <input type="text" id="arr-tz" class="tz-search" placeholder="输入城市或时区，如 Asia/Shanghai" autocomplete="off" required>
+                        <div id="arr-tz-dropdown" class="tz-dropdown hidden"></div>
+                    </div>
+
+                    <!-- Shift Settings -->
+                    <div class="form-group-title">调整偏好</div>
+                    <div class="form-group">
+                        <label for="shift-speed"><i data-lucide="zap" class="label-icon"></i> 生物钟调整速度 (每日)</label>
+                        <select id="shift-speed">
+                            <option value="1.0">温和模式 (每天调整 1.0 小时)</option>
+                            <option value="1.5" selected>标准模式 (每天调整 1.5 小时)</option>
+                            <option value="2.0">极速模式 (每天调整 2.0 小时)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row switches">
+                        <div class="switch-group">
+                            <label class="switch-container">
+                                <input type="checkbox" id="use-melatonin" checked>
+                                <span class="checkmark"></span>
+                                <span class="switch-label">使用褪黑素</span>
+                            </label>
+                            <p class="switch-help">在临睡前补充微量褪黑素加速相位转移</p>
+                        </div>
+                        <div class="switch-group">
+                            <label class="switch-container">
+                                <input type="checkbox" id="use-caffeine" checked>
+                                <span class="checkmark"></span>
+                                <span class="switch-label">使用咖啡因</span>
+                            </label>
+                            <p class="switch-help">在起床后的主观上午摄入茶/咖啡提神避困</p>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="form-actions">
+                        <button type="button" id="btn-generate" class="btn btn-primary btn-block">
+                            <i data-lucide="activity"></i> 生成倒时差方案
+                        </button>
+                        <button type="button" id="btn-export" class="btn btn-secondary btn-block" disabled>
+                            <i data-lucide="download"></i> 导出手机 iCal (.ics)
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Results Panel -->
+            <section class="results-panel">
+                <!-- Summary Card -->
+                <div class="summary-card glass-card hidden" id="summary-section">
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <div class="summary-label">时差偏差</div>
+                            <div class="summary-value" id="val-tz-diff">--</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">调整方向</div>
+                            <div class="summary-value" id="val-direction">--</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">预适应准备期</div>
+                            <div class="summary-value" id="val-prep-days">--</div>
+                        </div>
+                        <div class="summary-item">
+                            <div class="summary-label">首日最低体温 T<sub>min</sub></div>
+                            <div class="summary-value" id="val-tmin">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Charts (Daily blocks) -->
+                <div class="timeline-visual glass-card hidden" id="visual-section">
+                    <h2><i data-lucide="bar-chart-3" class="section-icon"></i> 每日 24 小时节律分布图</h2>
+                    <div class="gantt-legend">
+                        <span class="legend-item"><span class="legend-color sleep"></span>睡眠</span>
+                        <span class="legend-item"><span class="legend-color seek"></span>寻求强光</span>
+                        <span class="legend-item"><span class="legend-color avoid"></span>减少阳光/避光</span>
+                        <span class="legend-item"><span class="legend-color flight"></span>飞行中</span>
+                        <span class="legend-item"><span class="legend-color pill"></span>服药/咖啡</span>
+                    </div>
+                    <div class="gantt-container" id="gantt-bars">
+                        <!-- Dynamically filled daily bars -->
+                    </div>
+                </div>
+
+                <!-- Detailed Timeline (Vertical flow) -->
+                <div class="timeline-list glass-card hidden" id="list-section">
+                    <h2><i data-lucide="clock" class="section-icon"></i> 倒时差步骤详解日程表</h2>
+                    
+                    <!-- Timezone comparison notice -->
+                    <div class="tz-notice">
+                        <i data-lucide="info" class="info-icon"></i>
+                        <span>日程表同时列出<b>出发地时区</b>和<b>目的地时区</b>的时间，便于您对表对照。</span>
+                    </div>
+                    
+                    <div class="timeline-flow" id="vertical-timeline">
+                        <!-- Dynamically filled timeline items -->
+                    </div>
+                </div>
+
+                <!-- Initial Placeholder State -->
+                <div class="placeholder-state glass-card" id="placeholder-section">
+                    <i data-lucide="clock" class="placeholder-icon animate-pulse"></i>
+                    <h3>暂无生成的规划日程</h3>
+                    <p>请在左侧配置面板中填写您的航班时间及睡眠作息，点击“生成倒时差方案”。</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Script Entry -->
+    <script src="script.js"></script>
+</body>
+</html>
